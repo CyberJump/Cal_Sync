@@ -31,12 +31,16 @@ export default function EventModal({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // Utility to get YYYY-MM-DDThh:mm string in LOCAL time
+    const toLocalDatetime = (d) => {
+      if (!d) return '';
+      const dt = new Date(d);
+      // Adjust for local timezone offset
+      const localDt = new Date(dt.getTime() - (dt.getTimezoneOffset() * 60000));
+      return localDt.toISOString().slice(0, 16);
+    };
+
     if (event) {
-      const toLocalDatetime = (d) => {
-        if (!d) return '';
-        const dt = new Date(d);
-        return dt.toISOString().slice(0, 16);
-      };
       setFormData({
         title: event.TITLE || event.title || '',
         calendarId: event.CALENDAR_ID || event.calendarId || calendars[0]?.CALENDAR_ID || '',
@@ -52,13 +56,27 @@ export default function EventModal({
       });
     } else {
       const now = new Date();
+      // Adjust start to next whole hour
+      now.setMinutes(0, 0, 0);
+      now.setHours(now.getHours() + 1);
       const later = new Date(now.getTime() + 3600000);
-      setFormData((f) => ({
-        ...f,
+      
+      const localNow = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
+      const localLater = new Date(later.getTime() - (later.getTimezoneOffset() * 60000));
+
+      setFormData({
+        title: '',
         calendarId: calendars[0]?.CALENDAR_ID || '',
-        startTime: now.toISOString().slice(0, 16),
-        endTime: later.toISOString().slice(0, 16),
-      }));
+        startTime: localNow.toISOString().slice(0, 16),
+        endTime: localLater.toISOString().slice(0, 16),
+        isAllDay: false,
+        location: '',
+        description: '',
+        frequency: '',
+        intervalVal: 1,
+        recEndDate: '',
+        daysOfWeek: '',
+      });
     }
   }, [event, calendars]);
 
@@ -105,8 +123,19 @@ export default function EventModal({
     e.preventDefault();
     setLoading(true);
     try {
+      // Need to adjust from local string back to absolute JS Date representation before posting
+      const absoluteStart = new Date(formData.startTime).toISOString();
+      const absoluteEnd = new Date(formData.endTime).toISOString();
+      let absoluteRecEnd = null;
+      if (formData.recEndDate) {
+        absoluteRecEnd = new Date(formData.recEndDate).toISOString();
+      }
+
       await onSave({
         ...formData,
+        startTime: absoluteStart,
+        endTime: absoluteEnd,
+        recEndDate: absoluteRecEnd,
         eventId: event?.EVENT_ID,
       });
       onClose();
@@ -170,25 +199,59 @@ export default function EventModal({
 
             {/* Date/Time */}
             <div className="form-row">
-              <div className="form-group">
+              <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">Start</label>
-                <input
-                  type={formData.isAllDay ? 'date' : 'datetime-local'}
-                  className="form-input"
-                  value={formData.isAllDay ? formData.startTime.slice(0, 10) : formData.startTime}
-                  onChange={(e) => handleChange('startTime', e.target.value)}
-                  required
-                />
+                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={formData.startTime.slice(0, 10)}
+                    onChange={(e) => {
+                      const t = formData.startTime.slice(11, 16) || '00:00';
+                      handleChange('startTime', `${e.target.value}T${t}`);
+                    }}
+                    required
+                  />
+                  {!formData.isAllDay && (
+                    <input
+                      type="time"
+                      className="form-input"
+                      value={formData.startTime.slice(11, 16) || ''}
+                      onChange={(e) => {
+                        const d = formData.startTime.slice(0, 10) || new Date().toISOString().slice(0, 10);
+                        handleChange('startTime', `${d}T${e.target.value}`);
+                      }}
+                      required
+                    />
+                  )}
+                </div>
               </div>
-              <div className="form-group">
+              <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">End</label>
-                <input
-                  type={formData.isAllDay ? 'date' : 'datetime-local'}
-                  className="form-input"
-                  value={formData.isAllDay ? formData.endTime.slice(0, 10) : formData.endTime}
-                  onChange={(e) => handleChange('endTime', e.target.value)}
-                  required
-                />
+                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={formData.endTime.slice(0, 10)}
+                    onChange={(e) => {
+                      const t = formData.endTime.slice(11, 16) || '00:00';
+                      handleChange('endTime', `${e.target.value}T${t}`);
+                    }}
+                    required
+                  />
+                  {!formData.isAllDay && (
+                    <input
+                      type="time"
+                      className="form-input"
+                      value={formData.endTime.slice(11, 16) || ''}
+                      onChange={(e) => {
+                        const d = formData.endTime.slice(0, 10) || new Date().toISOString().slice(0, 10);
+                        handleChange('endTime', `${d}T${e.target.value}`);
+                      }}
+                      required
+                    />
+                  )}
+                </div>
               </div>
             </div>
 
