@@ -45,10 +45,30 @@ const SEARCH_USERS_BY_EMAIL = `
   FETCH FIRST 10 ROWS ONLY
 `;
 
+const UPDATE_RSVP_BY_EVENT = `
+  UPDATE event_participants
+  SET rsvp_status = :rsvpStatus
+  WHERE event_id = :eventId AND user_id = :userId
+`;
+
+const GET_EMAILS_FOR_EVENT = `
+  SELECT u.email, u.username
+  FROM event_participants ep
+  JOIN users u ON u.user_id = ep.user_id
+  WHERE ep.event_id = :eventId AND ep.rsvp_status IN ('accepted', 'pending')
+  UNION
+  SELECT u.email, u.username
+  FROM events e
+  JOIN users u ON u.user_id = e.created_by
+  WHERE e.event_id = :eventId
+`;
+
 module.exports = {
   GET_EVENT_PARTICIPANTS,
   GET_USER_SHARED_EVENTS,
   UPDATE_RSVP,
+  UPDATE_RSVP_BY_EVENT,
   DELETE_PARTICIPANT,
   SEARCH_USERS_BY_EMAIL,
+  GET_EMAILS_FOR_EVENT,
 };

@@ -1,5 +1,6 @@
 const app = require('./app');
 const db = require('./db/connection');
+const scheduler = require('./services/scheduler');
 
 const PORT = process.env.PORT || 5000;
 
@@ -12,6 +13,9 @@ async function start() {
     app.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
       console.log(`📋 Health check: http://localhost:${PORT}/api/health`);
+      
+      // Start scheduler
+      scheduler.startScheduler();
     });
   } catch (err) {
     console.error('❌ Failed to start server:', err.message);

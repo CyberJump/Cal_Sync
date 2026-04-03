@@ -4,14 +4,33 @@ const GET_EVENTS_BY_DATE_RANGE = `
   SELECT e.event_id, e.title, e.description, e.location,
          e.start_time, e.end_time, e.is_all_day, e.status,
          e.created_by, e.created_at, e.updated_at,
-         c.calendar_id, c.calendar_name, c.color_hex
+         c.calendar_id, c.calendar_name, c.color_hex,
+         0 AS is_shared
   FROM events e
   JOIN calendars c ON c.calendar_id = e.calendar_id
   WHERE c.user_id = :userId
     AND e.status = 'active'
     AND e.start_time < :endDate
     AND e.end_time > :startDate
-  ORDER BY e.start_time
+
+  UNION ALL
+
+  SELECT e.event_id, e.title, e.description, e.location,
+         e.start_time, e.end_time, e.is_all_day, e.status,
+         e.created_by, e.created_at, e.updated_at,
+         c.calendar_id, c.calendar_name, c.color_hex,
+         1 AS is_shared
+  FROM events e
+  JOIN calendars c ON c.calendar_id = e.calendar_id
+  JOIN event_participants ep ON ep.event_id = e.event_id
+  WHERE ep.user_id = :userId
+    AND ep.rsvp_status = 'accepted'
+    AND e.status = 'active'
+    AND c.user_id != :userId
+    AND e.start_time < :endDate
+    AND e.end_time > :startDate
+  
+  ORDER BY 5
 `;
 
 const GET_EVENT_BY_ID = `
@@ -92,6 +111,21 @@ const SEARCH_EVENTS = `
   ORDER BY e.start_time
 `;
 
+const GET_EVENTS_FOR_REMINDER = `
+  SELECT event_id, title, description, location, start_time, end_time, created_by
+  FROM events
+  WHERE start_time >= CURRENT_TIMESTAMP
+    AND start_time <= CURRENT_TIMESTAMP + INTERVAL '15' MINUTE
+    AND reminder_sent = 0
+    AND status = 'active'
+`;
+
+const MARK_REMINDER_SENT = `
+  UPDATE events
+  SET reminder_sent = 1
+  WHERE event_id = :eventId
+`;
+
 module.exports = {
   GET_EVENTS_BY_DATE_RANGE,
   GET_EVENT_BY_ID,
@@ -102,4 +136,6 @@ module.exports = {
   CANCEL_EVENT,
   DELETE_EVENT,
   SEARCH_EVENTS,
+  GET_EVENTS_FOR_REMINDER,
+  MARK_REMINDER_SENT,
 };

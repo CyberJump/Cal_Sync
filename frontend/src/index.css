@@ -172,13 +172,15 @@ input, select, textarea {
 .sidebar-logo {
   width: 32px;
   height: 32px;
-  background: var(--color-primary-gradient);
-  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-size: 1rem;
+}
+
+.sidebar-logo img {
+  border: 1px solid var(--color-text-tertiary);
+  border-radius: 4px;
+  padding: 2px;
 }
 
 .sidebar-title {
@@ -1185,16 +1187,19 @@ input, select, textarea {
 }
 
 .auth-logo {
-  width: 56px;
-  height: 56px;
-  background: var(--color-primary-gradient);
-  border-radius: var(--radius-lg);
+  width: 64px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto var(--space-5);
   font-size: 1.5rem;
-  color: white;
+}
+
+.auth-logo img {
+  border: 1px solid var(--color-text-tertiary);
+  border-radius: var(--radius-sm);
+  padding: 4px;
 }
 
 .auth-title {

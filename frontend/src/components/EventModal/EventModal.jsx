@@ -114,6 +114,10 @@ export default function EventModal({
         const res = await participantsAPI.getByEvent(event.EVENT_ID);
         setParticipants(res.data || []);
       } catch {}
+    } else {
+      if (!participants.some(p => p.USER_ID === user.USER_ID)) {
+        setParticipants([...participants, { ...user, RSVP_STATUS: 'pending' }]);
+      }
     }
     setParticipantQuery('');
     setSearchResults([]);
@@ -137,6 +141,7 @@ export default function EventModal({
         endTime: absoluteEnd,
         recEndDate: absoluteRecEnd,
         eventId: event?.EVENT_ID,
+        participants: isEdit ? [] : participants,
       });
       onClose();
     } catch (err) {
@@ -198,60 +203,61 @@ export default function EventModal({
             </div>
 
             {/* Date/Time */}
-            <div className="form-row">
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">Start</label>
-                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+            <div className="form-group">
+              <label className="form-label">Start Date & Time</label>
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                <input
+                  type="date"
+                  className="form-input"
+                  style={{ flex: 1 }}
+                  value={formData.startTime.slice(0, 10)}
+                  onChange={(e) => {
+                    const t = formData.startTime.slice(11, 16) || '00:00';
+                    handleChange('startTime', `${e.target.value}T${t}`);
+                  }}
+                  required
+                />
+                {!formData.isAllDay && (
                   <input
-                    type="date"
+                    type="time"
                     className="form-input"
-                    value={formData.startTime.slice(0, 10)}
+                    value={formData.startTime.slice(11, 16) || ''}
                     onChange={(e) => {
-                      const t = formData.startTime.slice(11, 16) || '00:00';
-                      handleChange('startTime', `${e.target.value}T${t}`);
+                      const d = formData.startTime.slice(0, 10) || new Date().toISOString().slice(0, 10);
+                      handleChange('startTime', `${d}T${e.target.value}`);
                     }}
                     required
                   />
-                  {!formData.isAllDay && (
-                    <input
-                      type="time"
-                      className="form-input"
-                      value={formData.startTime.slice(11, 16) || ''}
-                      onChange={(e) => {
-                        const d = formData.startTime.slice(0, 10) || new Date().toISOString().slice(0, 10);
-                        handleChange('startTime', `${d}T${e.target.value}`);
-                      }}
-                      required
-                    />
-                  )}
-                </div>
+                )}
               </div>
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">End</label>
-                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">End Date & Time</label>
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                <input
+                  type="date"
+                  className="form-input"
+                  style={{ flex: 1 }}
+                  value={formData.endTime.slice(0, 10)}
+                  onChange={(e) => {
+                    const t = formData.endTime.slice(11, 16) || '00:00';
+                    handleChange('endTime', `${e.target.value}T${t}`);
+                  }}
+                  required
+                />
+                {!formData.isAllDay && (
                   <input
-                    type="date"
+                    type="time"
                     className="form-input"
-                    value={formData.endTime.slice(0, 10)}
+                    value={formData.endTime.slice(11, 16) || ''}
                     onChange={(e) => {
-                      const t = formData.endTime.slice(11, 16) || '00:00';
-                      handleChange('endTime', `${e.target.value}T${t}`);
+                      const d = formData.endTime.slice(0, 10) || new Date().toISOString().slice(0, 10);
+                      handleChange('endTime', `${d}T${e.target.value}`);
                     }}
                     required
                   />
-                  {!formData.isAllDay && (
-                    <input
-                      type="time"
-                      className="form-input"
-                      value={formData.endTime.slice(11, 16) || ''}
-                      onChange={(e) => {
-                        const d = formData.endTime.slice(0, 10) || new Date().toISOString().slice(0, 10);
-                        handleChange('endTime', `${d}T${e.target.value}`);
-                      }}
-                      required
-                    />
-                  )}
-                </div>
+                )}
               </div>
             </div>
 
@@ -325,11 +331,40 @@ export default function EventModal({
               <label className="form-label" style={{ marginBottom: 'var(--space-3)', display: 'block' }}>
                 Participants
               </label>
+
+              {participants.length > 0 && (
+                <div className="participant-list" style={{ marginBottom: 'var(--space-4)' }}>
+                  {participants.map((p) => (
+                    <div key={p.PARTICIPANT_ID || p.USER_ID} className="participant-item">
+                      <div className="participant-avatar">
+                        {p.USERNAME?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                      <div className="participant-info">
+                        <div className="participant-name">{p.USERNAME}</div>
+                        <div className="participant-email">{p.EMAIL}</div>
+                      </div>
+                      <span className={`rsvp-badge rsvp-${p.RSVP_STATUS || 'pending'}`}>
+                        {p.RSVP_STATUS || 'pending'}
+                      </span>
+                      {!isEdit && (
+                        <button
+                          type="button"
+                          onClick={() => setParticipants(participants.filter(x => x.USER_ID !== p.USER_ID))}
+                          style={{ marginLeft: '8px', cursor: 'pointer', background: 'none', border: 'none', color: 'var(--color-danger)' }}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="participant-search">
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="Search by email to invite..."
+                  placeholder="Type an email address to invite..."
                   value={participantQuery}
                   onChange={(e) => handleSearchUsers(e.target.value)}
                   style={{ width: '100%' }}
@@ -354,24 +389,6 @@ export default function EventModal({
                   </div>
                 )}
               </div>
-              {participants.length > 0 && (
-                <div className="participant-list">
-                  {participants.map((p) => (
-                    <div key={p.PARTICIPANT_ID} className="participant-item">
-                      <div className="participant-avatar">
-                        {p.USERNAME?.charAt(0)?.toUpperCase()}
-                      </div>
-                      <div className="participant-info">
-                        <div className="participant-name">{p.USERNAME}</div>
-                        <div className="participant-email">{p.EMAIL}</div>
-                      </div>
-                      <span className={`rsvp-badge rsvp-${p.RSVP_STATUS}`}>
-                        {p.RSVP_STATUS}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
 

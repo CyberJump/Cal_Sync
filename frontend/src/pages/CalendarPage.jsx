@@ -5,7 +5,7 @@ import WeekGrid from '../components/CalendarGrid/WeekGrid';
 import DayGrid from '../components/CalendarGrid/DayGrid';
 import EventModal from '../components/EventModal/EventModal';
 import NotificationPanel from '../components/NotificationPanel/NotificationPanel';
-import { calendarsAPI, eventsAPI, reportsAPI } from '../api/client';
+import { calendarsAPI, eventsAPI, reportsAPI, participantsAPI } from '../api/client';
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -44,9 +44,15 @@ export default function CalendarPage() {
   const fetchCalendars = useCallback(async () => {
     try {
       const res = await calendarsAPI.getAll();
-      const cals = res.data || [];
-      setCalendars(cals);
-      setEnabledCalendars(new Set(cals.map((c) => c.CALENDAR_ID)));
+      const baseCalendars = res.data || [];
+      const sharedCalendar = {
+        CALENDAR_ID: 'shared',
+        CALENDAR_NAME: 'Shared With Me',
+        COLOR_HEX: '#8e8e93', // Apple grey for shared items
+      };
+      const combined = [...baseCalendars, sharedCalendar];
+      setCalendars(combined);
+      setEnabledCalendars(new Set(combined.map((c) => c.CALENDAR_ID)));
     } catch (err) {
       console.error('Failed to fetch calendars:', err);
     }
@@ -144,7 +150,17 @@ export default function CalendarPage() {
       if (formData.eventId) {
         await eventsAPI.update(formData.eventId, formData);
       } else {
-        await eventsAPI.create(formData);
+        const res = await eventsAPI.create(formData);
+        const newEventId = res.data?.eventId || res.data?.EVENT_ID;
+        if (newEventId && formData.participants && formData.participants.length > 0) {
+          for (let p of formData.participants) {
+            try {
+              await participantsAPI.add({ eventId: newEventId, userId: p.USER_ID });
+            } catch (e) {
+              console.error('Failed adding participant:', e);
+            }
+          }
+        }
       }
       await fetchEvents();
     } catch (err) {
@@ -206,7 +222,7 @@ export default function CalendarPage() {
       <Sidebar
         calendars={calendars}
         selectedDate={currentDate}
-        onDateSelect={(d) => setCurrentDate(d)}
+        onDateSelect={handleDayClick}
         enabledCalendars={enabledCalendars}
         onToggleCalendar={toggleCalendar}
         onAddCalendar={handleAddCalendar}
@@ -293,6 +309,7 @@ export default function CalendarPage() {
       <NotificationPanel
         isOpen={showNotifications}
         onClose={() => setShowNotifications(false)}
+        onAction={fetchEvents}
       />
     </div>
   );

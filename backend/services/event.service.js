@@ -1,13 +1,84 @@
 const db = require('../db/connection');
 const queries = require('../db/queries/event.queries');
 
-async function getEvents(userId, startDate, endDate) {
+// Helper function to calculate next recurrence instance
+function getNextRecurrence(date, frequency, intervalVal) {
+  const d = new Date(date);
+  const freq = frequency.toLowerCase();
+  const interval = parseInt(intervalVal) || 1;
+  
+  if (freq === 'daily') d.setDate(d.getDate() + interval);
+  else if (freq === 'weekly') d.setDate(d.getDate() + 7 * interval);
+  else if (freq === 'monthly') d.setMonth(d.getMonth() + interval);
+  else if (freq === 'yearly') d.setFullYear(d.getFullYear() + interval);
+  else d.setDate(d.getDate() + interval); // fallback
+  return d;
+}
+
+async function getEvents(userId, startDateStr, endDateStr) {
+  const startDate = new Date(startDateStr);
+  const endDate = new Date(endDateStr);
+
+  // 1. Fetch normal events that overlap this exact window
   const result = await db.execute(queries.GET_EVENTS_BY_DATE_RANGE, {
     userId,
-    startDate: new Date(startDate),
-    endDate: new Date(endDate),
+    startDate,
+    endDate,
   });
-  return result.rows;
+  
+  const allEvents = result.rows;
+
+  // 2. Fetch all recurring rules that belong to this user
+  const recurringResult = await db.execute(queries.GET_RECURRING_EVENTS_FOR_USER, {
+    userId
+  });
+
+  const recurringEvents = recurringResult.rows;
+
+  // 3. Expand the rules in-memory for the requested time frame
+  for (const template of recurringEvents) {
+    const originalStart = new Date(template.START_TIME);
+    let currentStart = new Date(template.START_TIME);
+    let currentEnd = new Date(template.END_TIME);
+    
+    // Safety fallback: if no rec_end_date, cap at 3 years max to prevent infinite loops
+    const maxRecDate = new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000);
+    const recEndDate = template.REC_END_DATE ? new Date(template.REC_END_DATE) : maxRecDate;
+    
+    const frequency = template.FREQUENCY;
+    const intervalVal = template.INTERVAL_VAL;
+
+    let iterations = 0;
+    while (currentStart <= endDate && currentStart <= recEndDate && iterations < 1500) {
+      iterations++;
+      
+      // If this specific instance overlaps the viewer's requested window
+      if (currentEnd >= startDate && currentStart <= endDate) {
+        
+        // Skip the very first instance because GET_EVENTS_BY_DATE_RANGE already caught it!
+        // (if it originally fell within the window).
+        const isOriginal = currentStart.getTime() === originalStart.getTime();
+        
+        if (!isOriginal) {
+          allEvents.push({
+            ...template,
+            START_TIME: new Date(currentStart), // Reassign calculated timestamp
+            END_TIME: new Date(currentEnd),
+            // Override EVENT_ID to avoid React duplicate key errors.
+            // parseInt("15_xyz") will naturally resolve to just 15 when calling backend!
+            EVENT_ID: `${template.EVENT_ID}_${currentStart.getTime()}`,
+            IS_SHARED: 0 // Marking standard for recurring logic
+          });
+        }
+      }
+
+      // Step forward by rule interval
+      currentStart = getNextRecurrence(currentStart, frequency, intervalVal);
+      currentEnd = getNextRecurrence(currentEnd, frequency, intervalVal);
+    }
+  }
+
+  return allEvents;
 }
 
 async function getEventById(eventId) {

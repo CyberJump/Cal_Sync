@@ -7,7 +7,12 @@ export default function DayGrid({ currentDate, events, enabledCalendars, onEvent
 
   const dayEvents = useMemo(() => {
     return events.filter((evt) => {
-      if (!enabledCalendars.has(evt.CALENDAR_ID)) return false;
+      // If it's a shared external event, check the 'shared' virtual calendar state
+      if (evt.IS_SHARED === 1) {
+        if (!enabledCalendars.has('shared')) return false;
+      } else {
+        if (!enabledCalendars.has(evt.CALENDAR_ID)) return false;
+      }
       const start = new Date(evt.START_TIME);
       return (
         start.getFullYear() === currentDate.getFullYear() &&
@@ -17,17 +22,74 @@ export default function DayGrid({ currentDate, events, enabledCalendars, onEvent
     });
   }, [events, currentDate, enabledCalendars]);
 
-  const getEventStyle = (evt) => {
-    const start = new Date(evt.START_TIME);
-    const end = new Date(evt.END_TIME);
-    const startMinutes = start.getHours() * 60 + start.getMinutes();
-    const duration = Math.max((end - start) / 60000, 30);
-    return {
-      top: `${(startMinutes / 60) * 60}px`,
-      height: `${(duration / 60) * 60}px`,
-      background: evt.COLOR_HEX || '#3478F6',
-    };
+  const getProcessedEvents = () => {
+    // 1. Sort by start time, then duration
+    const sorted = [...dayEvents].sort((a, b) => {
+      const startA = new Date(a.START_TIME);
+      const startB = new Date(b.START_TIME);
+      if (startA.getTime() !== startB.getTime()) return startA - startB;
+      const endA = new Date(a.END_TIME);
+      const endB = new Date(b.END_TIME);
+      return (endB - startB) - (endA - startA);
+    });
+
+    const columns = [];
+    const eventStyles = new Map();
+
+    sorted.forEach((evt) => {
+      let placed = false;
+      const startMs = new Date(evt.START_TIME).getTime();
+      
+      for (let i = 0; i < columns.length; i++) {
+        const col = columns[i];
+        const groupEnd = new Date(col[col.length - 1].END_TIME).getTime();
+        if (startMs >= groupEnd) {
+          col.push(evt);
+          eventStyles.set(evt.EVENT_ID, i);
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        columns.push([evt]);
+        eventStyles.set(evt.EVENT_ID, columns.length - 1);
+      }
+    });
+
+    const totalColumns = Math.max(columns.length, 1);
+
+    return sorted.map((evt) => {
+      const colIndex = eventStyles.get(evt.EVENT_ID);
+      const start = new Date(evt.START_TIME);
+      let end = new Date(evt.END_TIME);
+      
+      // Clamp to midnight if it spills over (avoid visual bleeding)
+      const eod = new Date(start);
+      eod.setHours(23, 59, 59, 999);
+      if (end > eod) {
+        end = eod;
+      }
+
+      const startMinutes = start.getHours() * 60 + start.getMinutes();
+      const duration = Math.max((end - start) / 60000, 30);
+      
+      const width = 100 / totalColumns;
+      const leftOffset = colIndex * width;
+
+      return {
+        ...evt,
+        renderedStyle: {
+          top: `${(startMinutes / 60) * 60}px`,
+          height: `${(duration / 60) * 60}px`,
+          left: `calc(${leftOffset}% + 4px)`,
+          width: `calc(${width}% - 8px)`,
+          background: evt.COLOR_HEX || '#3478F6',
+        }
+      };
+    });
   };
+
+  const processedEvents = getProcessedEvents();
 
   const formatTime = (date) => {
     const d = new Date(date);
@@ -66,11 +128,11 @@ export default function DayGrid({ currentDate, events, enabledCalendars, onEvent
               }}
             />
           ))}
-          {dayEvents.map((evt) => (
+          {processedEvents.map((evt) => (
             <div
               key={evt.EVENT_ID}
               className="day-event-block"
-              style={getEventStyle(evt)}
+              style={evt.renderedStyle}
               onClick={() => onEventClick(evt)}
             >
               <div style={{ fontWeight: 600 }}>{evt.TITLE}</div>

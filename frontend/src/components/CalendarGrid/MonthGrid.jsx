@@ -34,7 +34,14 @@ export default function MonthGrid({ currentDate, events, enabledCalendars, onEve
 
   const getEventsForDay = (date) => {
     return events.filter((evt) => {
-      if (!enabledCalendars.has(evt.CALENDAR_ID)) return false;
+      // If it's a shared external event, check the 'shared' virtual calendar state
+      if (evt.IS_SHARED === 1) {
+        if (!enabledCalendars.has('shared')) return false;
+      } else {
+        // Otherwise, check its native calendar ID
+        if (!enabledCalendars.has(evt.CALENDAR_ID)) return false;
+      }
+      
       const start = new Date(evt.START_TIME);
       const end = new Date(evt.END_TIME);
       return date >= new Date(start.getFullYear(), start.getMonth(), start.getDate()) &&

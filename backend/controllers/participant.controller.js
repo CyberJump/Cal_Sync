@@ -89,4 +89,27 @@ const searchUsers = async (req, res, next) => {
   }
 };
 
-module.exports = { getParticipants, addParticipant, updateRsvp, removeParticipant, getSharedEvents, searchUsers };
+const updateRsvpByEvent = async (req, res, next) => {
+  try {
+    const { rsvpStatus } = req.body;
+    const validStatuses = ['pending', 'accepted', 'declined'];
+
+    if (!rsvpStatus || !validStatuses.includes(rsvpStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid rsvpStatus is required (pending, accepted, declined)',
+      });
+    }
+
+    const result = await participantService.updateRsvpByEvent(
+      parseInt(req.params.eventId),
+      req.user.userId,
+      rsvpStatus
+    );
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getParticipants, addParticipant, updateRsvp, updateRsvpByEvent, removeParticipant, getSharedEvents, searchUsers };

@@ -18,6 +18,9 @@ router.get('/event/:eventId', participantController.getParticipants);
 // POST /api/participants — add participant to event
 router.post('/', participantController.addParticipant);
 
+// PUT /api/participants/event/:eventId/rsvp — update RSVP status by event ID
+router.put('/event/:eventId/rsvp', participantController.updateRsvpByEvent);
+
 // PUT /api/participants/:id/rsvp — update RSVP status
 router.put('/:id/rsvp', participantController.updateRsvp);
 

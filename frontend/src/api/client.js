@@ -62,6 +62,7 @@ export const participantsAPI = {
   getByEvent: (eventId) => api.get(`/participants/event/${eventId}`),
   add: (data) => api.post('/participants', data),
   updateRsvp: (id, rsvpStatus) => api.put(`/participants/${id}/rsvp`, { rsvpStatus }),
+  updateRsvpByEvent: (eventId, rsvpStatus) => api.put(`/participants/event/${eventId}/rsvp`, { rsvpStatus }),
   remove: (id, eventId) => api.delete(`/participants/${id}/event/${eventId}`),
   getShared: () => api.get('/participants/shared'),
   searchUsers: (query) => api.get('/participants/search', { params: { query } }),

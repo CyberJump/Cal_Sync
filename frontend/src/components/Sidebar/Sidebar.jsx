@@ -1,5 +1,6 @@
 import MiniCalendar from './MiniCalendar';
 import { useAuth } from '../../context/AuthContext';
+import logoImg from '../../assets/logo.png';
 
 const CALENDAR_COLORS = [
   '#3478F6', '#FF3B30', '#34C759', '#FF9500',
@@ -19,7 +20,9 @@ export default function Sidebar({
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <div className="sidebar-logo">📅</div>
+        <div className="sidebar-logo">
+          <img src={logoImg} alt="logo" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+        </div>
         <span className="sidebar-title">CalSync</span>
       </div>
 

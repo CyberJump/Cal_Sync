@@ -52,4 +52,18 @@ async function searchUsers(query, currentUserId) {
   return result.rows;
 }
 
-module.exports = { getEventParticipants, addParticipant, updateRsvp, removeParticipant, getSharedEvents, searchUsers };
+async function updateRsvpByEvent(eventId, userId, rsvpStatus) {
+  const result = await db.execute(queries.UPDATE_RSVP_BY_EVENT, {
+    eventId,
+    userId,
+    rsvpStatus,
+  });
+  if (result.rowsAffected === 0) {
+    const err = new Error('Participant not found or not authorized for this event');
+    err.statusCode = 404;
+    throw err;
+  }
+  return { updated: true };
+}
+
+module.exports = { getEventParticipants, addParticipant, updateRsvp, updateRsvpByEvent, removeParticipant, getSharedEvents, searchUsers };

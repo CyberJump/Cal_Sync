@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import logoImg from '../assets/logo.png';
 
 export default function RegisterPage() {
   const [username, setUsername] = useState('');
@@ -39,7 +40,9 @@ export default function RegisterPage() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <div className="auth-logo">📅</div>
+        <div className="auth-logo">
+          <img src={logoImg} alt="logo" style={{ width: 64, height: 64, objectFit: 'contain' }} />
+        </div>
         <h1 className="auth-title">Create Account</h1>
         <p className="auth-subtitle">Join CalSync to manage your schedule</p>
 

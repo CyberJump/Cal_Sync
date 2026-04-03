@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import logoImg from '../assets/logo.png';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -27,7 +28,9 @@ export default function LoginPage() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <div className="auth-logo">📅</div>
+        <div className="auth-logo">
+          <img src={logoImg} alt="logo" style={{ width: 64, height: 64, objectFit: 'contain' }} />
+        </div>
         <h1 className="auth-title">CalSync</h1>
         <p className="auth-subtitle">Sign in to your calendar</p>
 

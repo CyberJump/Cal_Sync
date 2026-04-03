@@ -38,6 +38,7 @@ CREATE TABLE events (
     created_by  NUMBER         NOT NULL,
     created_at  TIMESTAMP      DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at  TIMESTAMP      DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    reminder_sent NUMBER(1)    DEFAULT 0,
     CONSTRAINT fk_evt_cal FOREIGN KEY (calendar_id) REFERENCES calendars(calendar_id) ON DELETE CASCADE,
     CONSTRAINT fk_evt_user FOREIGN KEY (created_by) REFERENCES users(user_id),
     CONSTRAINT chk_evt_status CHECK (status IN ('active', 'cancelled')),

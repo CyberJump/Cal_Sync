@@ -69,9 +69,11 @@ const EVENT_SUMMARY = `
 // Notification queries
 const GET_USER_NOTIFICATIONS = `
   SELECT n.notification_id, n.event_id, n.message, n.is_read, n.created_at,
-         e.title AS event_title
+         e.title AS event_title,
+         ep.rsvp_status
   FROM notifications n
   LEFT JOIN events e ON e.event_id = n.event_id
+  LEFT JOIN event_participants ep ON ep.event_id = n.event_id AND ep.user_id = n.user_id
   WHERE n.user_id = :userId
   ORDER BY n.created_at DESC
   FETCH FIRST 50 ROWS ONLY
